@@ -12,11 +12,28 @@ class Database:
     db = None
 
     @classmethod
-    async def connect_db(cls):
+    async def connect_db(cls, test_mode: bool = False):
+        print("Connecting to MongoDB...")
         MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD")
-        MONGODB_URL = f"mongodb+srv://mad:{MONGODB_PASSWORD}@dev.kcr8fhi.mongodb.net/?retryWrites=true&w=majority&appName=dev"
+        print(MONGODB_PASSWORD)
+        MONGODB_URL = f"mongodb+srv://dev:{MONGODB_PASSWORD}@dev.wukiztm.mongodb.net/?retryWrites=true&w=majority&appName=dev"
         cls.client = AsyncIOMotorClient(MONGODB_URL)
-        cls.db = cls.client.studyapi
+        
+        if test_mode:
+            cls.db = cls.client.studyapi_test
+        else:
+            cls.db = cls.client.studyapi
+        # validate the database connection
+        try:
+            await cls.client.admin.command('ping')
+            # Create geospatial index for cafes
+            await cls.db.cafes.create_index([("location", "2dsphere")])
+        except Exception as e:
+            print("Fatal error - Could not connect to MongoDB")
+            print(f"Connection error details: {str(e)}")
+            raise Exception(f"Database connection failed: {str(e)}")
+
+        print("Connected to MongoDB")
 
     @classmethod
     async def close_db(cls):

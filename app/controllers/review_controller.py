@@ -9,8 +9,7 @@ class ReviewController:
 
     async def create_review(self, review_data: ReviewCreate) -> Review:
         try:
-            review = Review(**review_data.dict())
-            return await self.service.create_review(review)
+            return await self.service.create_review(review_data)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to create review: {str(e)}")
 
@@ -30,7 +29,7 @@ class ReviewController:
             raise HTTPException(status_code=404, detail="Review not found")
 
         # Update the review with validated data
-        updated_review = await self.service.update_review(review_id, review_data.dict(exclude_unset=True))
+        updated_review = await self.service.update_review(review_id, review_data.model_dump(exclude_unset=True))
         if not updated_review:
             raise HTTPException(status_code=500, detail="Failed to update review")
         return updated_review
@@ -53,8 +52,7 @@ class ReviewController:
             raise HTTPException(status_code=404, detail="Review not found")
 
         # Create Photo model instance
-        photo = Photo(**photo_data.dict())
-        updated_review = await self.service.add_photo(review_id, photo)
+        updated_review = await self.service.add_photo(review_id, photo_data)
         if not updated_review:
             raise HTTPException(status_code=500, detail="Failed to add photo")
         return updated_review 
