@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from typing import List
 from app.services.s3_service import S3Service
+from app.config.logging_config import logger
 
 router = APIRouter()
 s3_service = S3Service()
@@ -48,10 +49,13 @@ async def upload_file(file: UploadFile = File(...)):
     
     Returns the public URL where the file can be accessed.
     """
+    logger.info(f"File upload endpoint: Received file '{file.filename}' with content type '{file.content_type}'")
+    
     try:
         # Validate file type (optional - you can add specific validations)
         allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
         if file.content_type and file.content_type not in allowed_types:
+            logger.warning(f"File upload endpoint: Rejected file type '{file.content_type}'")
             raise HTTPException(
                 status_code=400,
                 detail=f"File type {file.content_type} not allowed. Allowed types: {', '.join(allowed_types)}"
@@ -59,6 +63,9 @@ async def upload_file(file: UploadFile = File(...)):
         
         # Upload file
         file_url = await s3_service.upload_file(file, folder="photos")
+        
+        logger.info(f"File upload endpoint: SUCCESS! File uploaded to: {file_url}")
+        print(f"🔗 UPLOADED FILE URL: {file_url}")  # Print to console for immediate visibility
         
         return {
             "url": file_url,
@@ -68,6 +75,7 @@ async def upload_file(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"File upload endpoint: Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Unexpected error: {str(e)}"

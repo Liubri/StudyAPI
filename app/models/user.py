@@ -18,7 +18,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: str = Field(..., alias="_id", example="60d5ec49e9af8b2c24e8a1b2")
-    profile_picture: Optional[str] = Field(None, example="user_1_profile.jpg", description="Profile picture filename")
+    profile_picture: Optional[str] = Field(None, example="https://madstudycafe.nyc3.digitaloceanspaces.com/profile-pictures/user_1_profile.jpg", description="Profile picture URL or filename")
     created_at: datetime = Field(default_factory=datetime.utcnow, example="2024-01-15T10:30:00Z")
     updated_at: datetime = Field(default_factory=datetime.utcnow, example="2024-01-15T10:30:00Z")
 
@@ -42,7 +42,7 @@ class UserResponse(UserBase):
 class User(UserBase):
     id: str = Field(..., alias="_id", example="60d5ec49e9af8b2c24e8a1b2")
     password: str = Field(..., description="Plain text password (hidden in response)")
-    profile_picture: Optional[str] = Field(None, example="user_1_profile.jpg")
+    profile_picture: Optional[str] = Field(None, example="https://madstudycafe.nyc3.digitaloceanspaces.com/profile-pictures/user_1_profile.jpg")
     created_at: datetime = Field(default_factory=datetime.utcnow, example="2024-01-15T10:30:00Z")
     updated_at: datetime = Field(default_factory=datetime.utcnow, example="2024-01-15T10:30:00Z")
 

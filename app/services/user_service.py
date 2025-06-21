@@ -1,11 +1,13 @@
 from typing import List, Optional
 from app.models.user import User, UserCreate, UserUpdate, UserResponse
 from app.repositories.user_repository import UserRepository
+from app.services.s3_service import S3Service
 import os
 
 class UserService:
     def __init__(self):
         self.repository = UserRepository()
+        self.s3_service = S3Service()
 
     async def create_user(self, user_data: UserCreate) -> UserResponse:
         """Create a new user"""
@@ -44,13 +46,21 @@ class UserService:
         # Get user first to check if they have a profile picture
         user = await self.repository.get_user(user_id)
         if user and user.profile_picture:
-            # Delete profile picture file if it exists
-            profile_pic_path = os.path.join("profile_pictures", user.profile_picture)
-            if os.path.exists(profile_pic_path):
+            # Handle both URL-based (Digital Ocean Spaces) and filename-based (local) profile pictures
+            if user.profile_picture.startswith('https://'):
+                # Delete from Digital Ocean Spaces
                 try:
-                    os.remove(profile_pic_path)
+                    await self.s3_service.delete_file(user.profile_picture)
                 except Exception:
                     pass  # Continue with user deletion even if file deletion fails
+            else:
+                # Delete local profile picture file if it exists
+                profile_pic_path = os.path.join("profile_pictures", user.profile_picture)
+                if os.path.exists(profile_pic_path):
+                    try:
+                        os.remove(profile_pic_path)
+                    except Exception:
+                        pass  # Continue with user deletion even if file deletion fails
         
         return await self.repository.delete_user(user_id)
 

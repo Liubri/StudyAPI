@@ -4,6 +4,7 @@ import os
 from typing import Optional
 from fastapi import UploadFile, HTTPException
 from botocore.exceptions import ClientError, NoCredentialsError
+from app.config.logging_config import logger
 
 class S3Service:
     def __init__(self):
@@ -13,6 +14,13 @@ class S3Service:
         self.access_key = os.getenv("DO_SPACES_ACCESS_KEY", "DO00EPMZYTVZHPHR3G8P")
         self.secret_key = os.getenv("DO_SPACES_SECRET_KEY", "FA8l/8u9JAZPBfBni/781lBKsb9KEhBO7s3+s3ptYK4")
         self.region = "nyc3"
+        
+        logger.info(f"S3Service initialized with:")
+        logger.info(f"  Endpoint: {self.endpoint_url}")
+        logger.info(f"  Bucket: {self.bucket_name}")
+        logger.info(f"  Region: {self.region}")
+        logger.info(f"  Access Key: {self.access_key[:10]}..." if self.access_key else "  Access Key: Not set")
+        logger.info(f"  Secret Key: {'Set' if self.secret_key else 'Not set'}")
         
         # Initialize S3 client for DigitalOcean Spaces
         self.s3_client = boto3.client(
@@ -37,10 +45,15 @@ class S3Service:
         Raises:
             HTTPException: If upload fails
         """
+        logger.info(f"S3Service: Starting file upload to folder '{folder}'")
+        
         try:
             # Validate file
             if not file.filename:
+                logger.error("S3Service: No filename provided")
                 raise HTTPException(status_code=400, detail="No file provided")
+            
+            logger.info(f"S3Service: Processing file '{file.filename}' with content type '{file.content_type}'")
             
             # Generate unique filename
             file_extension = file.filename.split(".")[-1] if "." in file.filename else ""
@@ -48,35 +61,72 @@ class S3Service:
             
             # Create the full key (path) for the file
             file_key = f"{folder}/{unique_filename}"
+            logger.info(f"S3Service: Generated file key: {file_key}")
             
             # Read file content
             file_content = await file.read()
+            file_size = len(file_content)
+            logger.info(f"S3Service: Read {file_size} bytes from uploaded file")
+            
+            # Reset file position for potential re-reads
+            await file.seek(0)
+            
+            # Validate content type
+            content_type = file.content_type or "application/octet-stream"
+            logger.info(f"S3Service: Using content type: {content_type}")
+            
+            # Debug S3 client configuration
+            logger.info(f"S3Service: About to upload with:")
+            logger.info(f"  Bucket: {self.bucket_name}")
+            logger.info(f"  Key: {file_key}")
+            logger.info(f"  Content-Type: {content_type}")
+            logger.info(f"  Content size: {file_size}")
             
             # Upload to DigitalOcean Spaces
-            self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=file_key,
-                Body=file_content,
-                ContentType=file.content_type or "application/octet-stream",
-                ACL='public-read'  # Make the file publicly accessible
-            )
+            logger.info(f"S3Service: Uploading to bucket '{self.bucket_name}' with key '{file_key}'")
+            
+            # Try the upload with detailed error handling
+            try:
+                response = self.s3_client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=file_key,
+                    Body=file_content,
+                    ContentType=content_type,
+                    ACL='public-read'  # Make the file publicly accessible
+                )
+                logger.info(f"S3Service: put_object response: {response}")
+                
+            except ClientError as e:
+                error_code = e.response['Error']['Code']
+                error_message = e.response['Error']['Message']
+                logger.error(f"S3Service: ClientError - Code: {error_code}, Message: {error_message}")
+                logger.error(f"S3Service: Full error response: {e.response}")
+                raise e
+            except Exception as e:
+                logger.error(f"S3Service: Unexpected error during put_object: {str(e)}")
+                logger.error(f"S3Service: Error type: {type(e)}")
+                raise e
             
             # Construct the public URL
             public_url = f"https://{self.bucket_name}.{self.region}.digitaloceanspaces.com/{file_key}"
+            logger.info(f"S3Service: Upload successful! File available at: {public_url}")
             
             return public_url
             
-        except NoCredentialsError:
+        except NoCredentialsError as e:
+            logger.error(f"S3Service: Credentials error: {str(e)}")
             raise HTTPException(
                 status_code=500,
                 detail="S3 credentials not configured properly"
             )
         except ClientError as e:
+            logger.error(f"S3Service: Client error during upload: {str(e)}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to upload file to S3: {str(e)}"
             )
         except Exception as e:
+            logger.error(f"S3Service: Unexpected error during upload: {str(e)}", exc_info=True)
             raise HTTPException(
                 status_code=500,
                 detail=f"Unexpected error during file upload: {str(e)}"

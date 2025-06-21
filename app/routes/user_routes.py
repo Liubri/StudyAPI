@@ -138,7 +138,8 @@ async def delete_user(user_id: str):
                 "application/json": {
                     "example": {
                         "message": "Profile picture uploaded successfully",
-                        "filename": "user_60d5ec49e9af8b2c24e8a1b2_profile.jpg"
+                        "url": "https://madstudycafe.nyc3.digitaloceanspaces.com/profile-pictures/12345678-1234-1234-1234-123456789abc.jpg",
+                        "filename": "12345678-1234-1234-1234-123456789abc.jpg"
                     }
                 }
             }

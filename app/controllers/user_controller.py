@@ -2,6 +2,7 @@ from typing import List, Optional
 from fastapi import HTTPException, UploadFile
 from app.models.user import UserCreate, UserUpdate, UserResponse, UserLogin, LoginResponse
 from app.services.user_service import UserService
+from app.services.s3_service import S3Service
 from app.config.logging_config import logger
 import os
 import shutil
@@ -9,6 +10,8 @@ import shutil
 class UserController:
     def __init__(self):
         self.service = UserService()
+        self.s3_service = S3Service()
+        # Keep profile_pics_dir for backwards compatibility with existing cleanup code
         self.profile_pics_dir = "profile_pictures"
         os.makedirs(self.profile_pics_dir, exist_ok=True)
 
@@ -68,8 +71,9 @@ class UserController:
         return {"message": "User deleted successfully"}
 
     async def upload_profile_picture(self, user_id: str, file: UploadFile) -> dict:
-        """Upload profile picture for a user"""
+        """Upload profile picture for a user to Digital Ocean Spaces"""
         logger.info(f"Controller: Received request to upload profile picture for user ID: {user_id}")
+        logger.info(f"Controller: File details - name: '{file.filename}', content_type: '{file.content_type}', size: {file.size if hasattr(file, 'size') else 'unknown'}")
         
         # Check if user exists
         user = await self.service.get_user(user_id)
@@ -77,36 +81,61 @@ class UserController:
             logger.warning(f"Controller: User not found for profile picture upload with ID: {user_id}")
             raise HTTPException(status_code=404, detail="User not found")
         
+        logger.info(f"Controller: User found - current profile picture: {user.profile_picture}")
+        
         try:
             # Validate file type
             if not file.content_type or not file.content_type.startswith('image/'):
+                logger.error(f"Controller: Invalid file type: {file.content_type}")
                 raise HTTPException(status_code=400, detail="File must be an image")
             
-            # Delete old profile picture if it exists
-            if user.profile_picture:
+            # Delete old profile picture from Digital Ocean Spaces if it exists
+            if user.profile_picture and user.profile_picture.startswith('https://'):
+                # If it's a URL (from Digital Ocean Spaces), delete it
+                logger.info(f"Controller: Attempting to delete old profile picture from S3: {user.profile_picture}")
+                try:
+                    await self.s3_service.delete_file(user.profile_picture)
+                    logger.info("Controller: Successfully deleted old profile picture from S3")
+                except Exception as e:
+                    logger.warning(f"Failed to delete old profile picture from S3: {str(e)}")
+            elif user.profile_picture:
+                # If it's a local filename (legacy), delete local file
                 old_pic_path = os.path.join(self.profile_pics_dir, user.profile_picture)
+                logger.info(f"Controller: Attempting to delete old local profile picture: {old_pic_path}")
                 if os.path.exists(old_pic_path):
-                    os.remove(old_pic_path)
+                    try:
+                        os.remove(old_pic_path)
+                        logger.info("Controller: Successfully deleted old local profile picture")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete old local profile picture: {str(e)}")
             
-            # Generate unique filename
-            file_extension = os.path.splitext(file.filename)[1] if file.filename else '.jpg'
-            new_filename = f"user_{user_id}_profile{file_extension}"
-            file_path = os.path.join(self.profile_pics_dir, new_filename)
+            # Upload to Digital Ocean Spaces
+            logger.info("Controller: Starting upload to Digital Ocean Spaces")
+            file_url = await self.s3_service.upload_file(file, folder="profile-pictures")
+            logger.info(f"Controller: Upload successful! File URL: {file_url}")
+            print(f"🖼️  PROFILE PICTURE UPLOADED: {file_url}")  # Print to console for immediate visibility
             
-            # Save the file
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            
-            # Update user record
-            updated_user = await self.service.update_profile_picture(user_id, new_filename)
+            # Update user record with the full URL
+            logger.info(f"Controller: Updating user record with new profile picture URL")
+            updated_user = await self.service.update_profile_picture(user_id, file_url)
             if not updated_user:
-                # If update failed, remove the uploaded file
-                if os.path.exists(file_path):
-                    os.remove(file_path)
+                logger.error("Controller: Failed to update user record with new profile picture")
+                # If update failed, try to delete the uploaded file
+                try:
+                    await self.s3_service.delete_file(file_url)
+                    logger.info("Controller: Cleaned up uploaded file after database update failure")
+                except Exception:
+                    logger.warning("Controller: Failed to clean up uploaded file after database update failure")
                 raise HTTPException(status_code=500, detail="Failed to update user profile picture")
             
             logger.info(f"Controller: Successfully uploaded profile picture for user ID: {user_id}")
-            return {"message": "Profile picture uploaded successfully", "filename": new_filename}
+            response = {
+                "message": "Profile picture uploaded successfully", 
+                "url": file_url,
+                "filename": file_url.split('/')[-1]  # Extract filename from URL for backwards compatibility
+            }
+            logger.info(f"Controller: Returning response: {response}")
+            return response
             
         except HTTPException:
             raise
