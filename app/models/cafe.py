@@ -10,48 +10,52 @@ class AccessLevel(IntEnum):
     EXCELLENT = 3
 
 class Address(BaseModel):
-    street: str
-    city: str
-    state: str
-    zip_code: str
-    country: str = "USA"  # Default to USA
+    street: str = Field(..., example="123 Main St")
+    city: str = Field(..., example="San Francisco")
+    state: str = Field(..., example="CA")
+    zip_code: str = Field(..., example="94102")
+    country: str = Field("USA", example="USA")
 
 class Location(BaseModel):
-    type: str = "Point"
-    coordinates: Tuple[float, float]  # [longitude, latitude]
+    type: str = Field("Point", example="Point")
+    coordinates: Tuple[float, float] = Field(..., example=[-122.4194, 37.7749])  # [longitude, latitude]
 
 class CafeBase(BaseModel):
-    name: str
+    name: str = Field(..., example="The Coffee Corner")
     address: Address
     location: Location
-    phone: Optional[str] = None
-    website: Optional[str] = None
-    opening_hours: Optional[dict] = None
-    amenities: Optional[List[str]] = None
-    thumbnail_url: Optional[str] = None
-    wifi_access: AccessLevel = Field(default=AccessLevel.NONE)
-    outlet_accessibility: AccessLevel = Field(default=AccessLevel.NONE)
-    average_rating: conint(ge=1, le=5) = Field(default=1)
+    phone: Optional[str] = Field(None, example="415-123-4567")
+    website: Optional[str] = Field(None, example="https://thecoffeecorner.com")
+    opening_hours: Optional[dict] = Field(None, example={"Mon-Fri": "7am-7pm", "Sat-Sun": "8am-6pm"})
+    amenities: Optional[List[str]] = Field(None, example=["Free WiFi", "Power outlets", "Outdoor seating"])
+    thumbnail_url: Optional[str] = Field(None, example="https://example.com/thumbnail.jpg")
+    wifi_access: AccessLevel = Field(default=AccessLevel.NONE, example=3)
+    outlet_accessibility: AccessLevel = Field(default=AccessLevel.NONE, example=2)
+    average_rating: conint(ge=1, le=5) = Field(default=1, example=4)
 
 class CafeCreate(CafeBase):
     pass
 
 class CafeUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, example="The New Coffee Corner")
     address: Optional[Address] = None
     location: Optional[Location] = None
-    phone: Optional[str] = None
-    website: Optional[str] = None
-    opening_hours: Optional[dict] = None
-    amenities: Optional[List[str]] = None
-    thumbnail_url: Optional[str] = None
-    wifi_access: Optional[AccessLevel] = None
-    outlet_accessibility: Optional[AccessLevel] = None
-    average_rating: Optional[conint(ge=1, le=5)] = None
+    phone: Optional[str] = Field(None, example="415-987-6543")
+    website: Optional[str] = Field(None, example="https://newcoffeecorner.com")
+    opening_hours: Optional[dict] = Field(None, example={"Mon-Sun": "7am-8pm"})
+    amenities: Optional[List[str]] = Field(None, example=["Free WiFi", "Power outlets", "Outdoor seating", "Pet friendly"])
+    thumbnail_url: Optional[str] = Field(None, example="https://example.com/new_thumbnail.jpg")
+    wifi_access: Optional[AccessLevel] = Field(None, example=3)
+    outlet_accessibility: Optional[AccessLevel] = Field(None, example=3)
+    average_rating: Optional[conint(ge=1, le=5)] = Field(None, example=5)
 
 class Cafe(CafeBase):
-    id: str = Field(..., alias="_id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    id: str = Field(..., alias="_id", example="60d5ec49e9af8b2c24e8a1b2")
+    created_at: datetime = Field(default_factory=datetime.utcnow, example="2024-01-15T10:30:00Z")
+    updated_at: datetime = Field(default_factory=datetime.utcnow, example="2024-01-15T10:30:00Z")
 
-    model_config = ConfigDict(populate_by_name=True) 
+    model_config = ConfigDict(
+        populate_by_name=True,
+        allow_population_by_field_name=True,
+        ser_by_alias=False  # This ensures serialization uses field names, not aliases
+    ) 

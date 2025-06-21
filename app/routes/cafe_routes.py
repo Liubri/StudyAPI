@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, status
 from typing import List
 from app.models.cafe import Cafe, CafeCreate, CafeUpdate, AccessLevel
 from app.controllers.cafe_controller import CafeController
@@ -6,11 +6,24 @@ from app.controllers.cafe_controller import CafeController
 router = APIRouter()
 cafe_controller = CafeController()
 
-@router.post("/cafes/", response_model=Cafe)
+@router.post(
+    "/cafes/", 
+    response_model=Cafe,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new cafe",
+    description="Create a new cafe with details such as name, address, location, and amenities.",
+    response_description="The created cafe object."
+)
 async def create_cafe(cafe: CafeCreate):
     return await cafe_controller.create_cafe(cafe)
 
-@router.get("/cafes/", response_model=List[Cafe])
+@router.get(
+    "/cafes/", 
+    response_model=List[Cafe],
+    summary="Get all cafes",
+    description="Retrieve a list of all cafes in the database.",
+    response_description="A list of cafe objects."
+)
 async def get_all_cafes():
     return await cafe_controller.get_all_cafes()
 
@@ -51,7 +64,8 @@ async def get_cafe(
     "/cafes/{cafe_id}",
     response_model=Cafe,
     summary="Update a cafe",
-    description="Update the details of a specific cafe by its ID",
+    description="Update the details of a specific cafe by its ID. Allows for partial updates.",
+    response_description="The updated cafe object.",
     responses={
         200: {"description": "Cafe updated successfully"},
         404: {"description": "Cafe not found"}
@@ -71,10 +85,19 @@ async def update_cafe(
 
 @router.delete(
     "/cafes/{cafe_id}",
+    status_code=status.HTTP_200_OK,
     summary="Delete a cafe",
-    description="Delete a cafe by its unique ID",
+    description="Delete a cafe by its unique ID. This action is irreversible.",
+    response_description="Confirmation message of successful deletion.",
     responses={
-        200: {"description": "Cafe deleted successfully"},
+        200: {
+            "description": "Cafe deleted successfully",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Cafe deleted successfully"}
+                }
+            }
+        },
         404: {"description": "Cafe not found"}
     }
 )
@@ -90,13 +113,13 @@ async def delete_cafe(
     return {"message": "Cafe deleted successfully"}
 
 @router.get(
-    "/cafes/search/{query}",
+    "/cafes/search/",
     response_model=List[Cafe],
     summary="Search cafes",
-    description="Search for cafes by name, city, or street"
+    description="Search for cafes by name, city, or street using a text query."
 )
 async def search_cafes(
-    query: str
+    query: str = Query(..., description="Text to search in cafe name, city, or street")
 ):
     """
     Search for cafes by a text query.
