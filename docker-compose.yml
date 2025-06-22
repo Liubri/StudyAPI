@@ -8,4 +8,6 @@ services:
         environment:
             - PYTHONPATH=/app
             - MONGODB_PASSWORD=${MONGODB_PASSWORD}
+            - DO_SPACES_ACCESS_KEY=${DO_SPACES_ACCESS_KEY:-DO00EPMZYTVZHPHR3G8P}
+            - DO_SPACES_SECRET_KEY=${DO_SPACES_SECRET_KEY:-FA8l/8u9JAZPBfBni/781lBKsb9KEhBO7s3+s3ptYK4}
         restart: unless-stopped

@@ -55,12 +55,16 @@ class S3Service:
             
             logger.info(f"S3Service: Processing file '{file.filename}' with content type '{file.content_type}'")
             
-            # Generate unique filename
+            # Generate unique filename with sanitized extension
             file_extension = file.filename.split(".")[-1] if "." in file.filename else ""
+            # Sanitize file extension to remove any potentially problematic characters
+            file_extension = ''.join(c for c in file_extension if c.isalnum()).lower()
+            
             unique_filename = f"{uuid.uuid4()}.{file_extension}" if file_extension else str(uuid.uuid4())
             
-            # Create the full key (path) for the file
-            file_key = f"{folder}/{unique_filename}"
+            # Create the full key (path) for the file - ensure no double slashes
+            folder = folder.strip('/')  # Remove leading/trailing slashes
+            file_key = f"{folder}/{unique_filename}" if folder else unique_filename
             logger.info(f"S3Service: Generated file key: {file_key}")
             
             # Read file content
@@ -71,28 +75,61 @@ class S3Service:
             # Reset file position for potential re-reads
             await file.seek(0)
             
-            # Validate content type
-            content_type = file.content_type or "application/octet-stream"
+            # Validate content type and handle edge cases
+            content_type = file.content_type
+            if not content_type or content_type == "application/octet-stream":
+                # Try to infer content type from file extension
+                if file_extension.lower() in ['jpg', 'jpeg']:
+                    content_type = "image/jpeg"
+                elif file_extension.lower() == 'png':
+                    content_type = "image/png"
+                elif file_extension.lower() == 'gif':
+                    content_type = "image/gif"
+                elif file_extension.lower() == 'pdf':
+                    content_type = "application/pdf"
+                else:
+                    content_type = "application/octet-stream"
+            
             logger.info(f"S3Service: Using content type: {content_type}")
+            
+            # Validate all parameters before upload
+            if not self.bucket_name:
+                logger.error("S3Service: Bucket name is None or empty")
+                raise HTTPException(status_code=500, detail="S3 bucket name not configured")
+            
+            if not file_key:
+                logger.error("S3Service: File key is None or empty")
+                raise HTTPException(status_code=500, detail="Invalid file key generated")
+            
+            if file_content is None:
+                logger.error("S3Service: File content is None")
+                raise HTTPException(status_code=400, detail="File content is empty")
+            
+            if not content_type:
+                logger.error("S3Service: Content type is None or empty")
+                content_type = "application/octet-stream"
             
             # Debug S3 client configuration
             logger.info(f"S3Service: About to upload with:")
-            logger.info(f"  Bucket: {self.bucket_name}")
-            logger.info(f"  Key: {file_key}")
-            logger.info(f"  Content-Type: {content_type}")
-            logger.info(f"  Content size: {file_size}")
+            logger.info(f"  Bucket: '{self.bucket_name}' (type: {type(self.bucket_name)})")
+            logger.info(f"  Key: '{file_key}' (type: {type(file_key)})")
+            logger.info(f"  Content-Type: '{content_type}' (type: {type(content_type)})")
+            logger.info(f"  Content size: {file_size} (type: {type(file_content)})")
+            logger.info(f"  Access key: {self.access_key[:10]}..." if self.access_key else "None")
+            logger.info(f"  Secret key: {'***' if self.secret_key else 'None'}")
+            logger.info(f"  Endpoint: {self.endpoint_url}")
             
             # Upload to DigitalOcean Spaces
             logger.info(f"S3Service: Uploading to bucket '{self.bucket_name}' with key '{file_key}'")
             
             # Try the upload with detailed error handling
             try:
+                # First attempt without ACL (DigitalOcean Spaces handles public access differently)
                 response = self.s3_client.put_object(
                     Bucket=self.bucket_name,
                     Key=file_key,
                     Body=file_content,
-                    ContentType=content_type,
-                    ACL='public-read'  # Make the file publicly accessible
+                    ContentType=content_type
                 )
                 logger.info(f"S3Service: put_object response: {response}")
                 
@@ -101,6 +138,15 @@ class S3Service:
                 error_message = e.response['Error']['Message']
                 logger.error(f"S3Service: ClientError - Code: {error_code}, Message: {error_message}")
                 logger.error(f"S3Service: Full error response: {e.response}")
+                
+                # Log additional debugging information
+                logger.error(f"S3Service: Request details:")
+                logger.error(f"  Bucket: {self.bucket_name}")
+                logger.error(f"  Key: {file_key}")
+                logger.error(f"  Content-Type: {content_type}")
+                logger.error(f"  Body size: {len(file_content)}")
+                logger.error(f"  Access key starts with: {self.access_key[:5]}..." if self.access_key else "No access key")
+                
                 raise e
             except Exception as e:
                 logger.error(f"S3Service: Unexpected error during put_object: {str(e)}")
