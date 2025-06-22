@@ -90,7 +90,12 @@ class CafeService:
         return await self.repository.find_cafes_by_amenities(amenities)
 
     async def find_cafes_by_rating(self, min_rating: float) -> List[Cafe]:
-        logger.info(f"Service: Finding cafes with min rating: {min_rating}")
-        if not 1 <= min_rating <= 5:
+        logger.info(f"Service: Finding cafes with rating >= {min_rating}")
+        if min_rating < 1 or min_rating > 5:
             raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
-        return await self.repository.find_cafes_by_rating(min_rating) 
+        return await self.repository.find_cafes_by_rating(min_rating)
+
+    async def get_cafe_photos(self, cafe_id: str) -> List[dict]:
+        """Get all photos for a specific cafe from all reviews"""
+        logger.info(f"Service: Getting photos for cafe: {cafe_id}")
+        return await self.repository.get_cafe_photos(cafe_id) 

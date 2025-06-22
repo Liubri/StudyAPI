@@ -68,5 +68,23 @@ class CafeController:
         return await self.service.find_cafes_by_amenities(amenities)
 
     async def find_cafes_by_rating(self, min_rating: float) -> List[Cafe]:
-        logger.info(f"Controller: Received request to find cafes by rating: >{min_rating}")
-        return await self.service.find_cafes_by_rating(min_rating) 
+        logger.info(f"Controller: Received request to find cafes by minimum rating: {min_rating}")
+        return await self.service.find_cafes_by_rating(min_rating)
+
+    async def get_cafe_photos(self, cafe_id: str) -> List[dict]:
+        """Get all photos for a specific cafe from reviews"""
+        logger.info(f"Controller: Received request to get photos for cafe with ID: {cafe_id}")
+        
+        # First verify the cafe exists
+        cafe = await self.get_cafe(cafe_id)
+        if not cafe:
+            logger.warning(f"Controller: Cafe not found with ID: {cafe_id}")
+            raise HTTPException(status_code=404, detail="Cafe not found")
+        
+        try:
+            photos = await self.service.get_cafe_photos(cafe_id)
+            logger.info(f"Controller: Found {len(photos)} photos for cafe {cafe_id}")
+            return photos
+        except Exception as e:
+            logger.error(f"Controller: Error getting photos for cafe {cafe_id}: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to retrieve cafe photos") 

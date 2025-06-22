@@ -5,6 +5,7 @@ from app.routes import review_routes
 from app.routes import cafe_routes
 from app.routes import file_routes
 from app.routes import user_routes
+from app.routes import bookmark_routes
 from app.config.database import Database
 from app.config.logging_config import logger
 import time
@@ -20,6 +21,7 @@ app = FastAPI(
     * **User Management**: Create, read, update, and delete users with simple authentication
     * **Cafe Management**: Create, read, update, and delete cafe information
     * **Review System**: Submit and manage reviews for study spots
+    * **Bookmark System**: Save and manage favorite cafes for users
     * **Photo Uploads**: Attach photos to reviews and upload profile pictures
     * **Search & Discovery**: Find cafes by location, amenities, and ratings
     * **Geospatial Queries**: Find nearby cafes based on coordinates
@@ -31,8 +33,9 @@ app = FastAPI(
     1. Use the `/api/v1/users/` endpoints to manage user accounts and authentication
     2. Use the `/api/v1/cafes/` endpoints to manage cafe information
     3. Use the `/api/v1/reviews/` endpoints to manage reviews
-    4. Use the `/api/v1/files/` endpoints to upload and manage files
-    5. All endpoints return JSON responses
+    4. Use the `/api/v1/bookmarks/` endpoints to manage user bookmarks
+    5. Use the `/api/v1/files/` endpoints to upload and manage files
+    6. All endpoints return JSON responses
     
     ## User System
     
@@ -86,6 +89,11 @@ app.include_router(
     prefix="/api/v1/files",
     tags=["File Management"]
 )
+app.include_router(
+    bookmark_routes.router, 
+    prefix="/api/v1",
+    tags=["Bookmarks"]
+)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -131,6 +139,7 @@ async def root():
             "User Management & Authentication",
             "Cafe Management",
             "Review System",
+            "Bookmark System",
             "Photo & File Uploads",
             "Search & Discovery",
             "Geospatial Queries"

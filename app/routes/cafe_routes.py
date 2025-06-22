@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, status, Path
 from typing import List
 from app.models.cafe import Cafe, CafeCreate, CafeUpdate, AccessLevel
 from app.controllers.cafe_controller import CafeController
@@ -178,4 +178,44 @@ async def find_cafes_by_rating(
 
     - **min_rating**: Minimum average rating (1-5)
     """
-    return await cafe_controller.find_cafes_by_rating(min_rating) 
+    return await cafe_controller.find_cafes_by_rating(min_rating)
+
+@router.get(
+    "/cafes/{cafe_id}/photos",
+    response_model=List[dict],
+    summary="Get all photos for a cafe",
+    description="Retrieve all photos from reviews for a specific cafe, including captions and review information",
+    response_description="A list of photo objects with URLs, captions, and review metadata",
+    responses={
+        200: {
+            "description": "Photos retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "photo123",
+                            "url": "https://madstudycafe.nyc3.digitaloceanspaces.com/review-photos/abc123.jpg",
+                            "caption": "Great study spot with good lighting",
+                            "review_id": "review456",
+                            "user_id": "user789",
+                            "created_at": "2024-01-15T10:30:00Z"
+                        }
+                    ]
+                }
+            }
+        },
+        404: {"description": "Cafe not found"},
+        500: {"description": "Internal server error"}
+    }
+)
+async def get_cafe_photos(
+    cafe_id: str = Path(..., description="The unique identifier of the cafe")
+):
+    """
+    Get all photos for a specific cafe from all reviews.
+
+    - **cafe_id**: The unique identifier of the cafe
+    
+    Returns a list of photos with metadata from all reviews for this cafe.
+    """
+    return await cafe_controller.get_cafe_photos(cafe_id) 

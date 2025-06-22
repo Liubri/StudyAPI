@@ -106,4 +106,43 @@ class CafeRepository:
         cafes = await cursor.to_list(length=None)
         for cafe in cafes:
             cafe["_id"] = str(cafe["_id"])
-        return [Cafe.model_validate(cafe) for cafe in cafes] 
+        return [Cafe.model_validate(cafe) for cafe in cafes]
+
+    async def get_cafe_photos(self, cafe_id: str) -> List[dict]:
+        """Get all photos for a specific cafe from all reviews"""
+        # Access the reviews collection to find reviews for this cafe
+        reviews_collection = Database.get_db().reviews
+        
+        # Aggregate photos from all reviews for this cafe
+        pipeline = [
+            # Match reviews for this specific cafe
+            {"$match": {"study_spot_id": ObjectId(cafe_id)}},
+            # Unwind the photos array to get individual photos
+            {"$unwind": "$photos"},
+            # Project the desired fields
+            {"$project": {
+                "photo_id": "$photos._id",
+                "url": "$photos.url", 
+                "caption": "$photos.caption",
+                "review_id": "$_id",
+                "user_id": "$user_id",
+                "created_at": "$created_at"
+            }}
+        ]
+        
+        cursor = reviews_collection.aggregate(pipeline)
+        photos = await cursor.to_list(length=None)
+        
+        # Format the response
+        formatted_photos = []
+        for photo in photos:
+            formatted_photos.append({
+                "id": str(photo["photo_id"]),
+                "url": photo["url"],
+                "caption": photo.get("caption", ""),
+                "review_id": str(photo["review_id"]),
+                "user_id": photo["user_id"],
+                "created_at": photo["created_at"]
+            })
+        
+        return formatted_photos 
