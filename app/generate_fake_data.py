@@ -47,9 +47,9 @@ STUDY_FRIENDLY_OPTIONS = [
 ]
 
 # New cafe tag options
-ATMOSPHERE_OPTIONS = ["Cozy", "Rustic", "Traditional", "Warm", "Clean"]
-ENERGY_LEVEL_OPTIONS = ["quiet", "low-key", "tranquil", "moderate", "average"]
-STUDY_FRIENDLY_LEVELS = ["study heaven", "good", "decent", "mixed", "fair"]
+ATMOSPHERE_OPTIONS = ["Cozy", "Rustic", "Traditional", "Warm", "Clean", "Industrial", "Basic", "Modern", "Elegant", "Casual"]
+ENERGY_LEVEL_OPTIONS = ["quiet", "low-key", "tranquil", "moderate", "average", "Loud", "energetic", "vibrant", "bustling", "peaceful"]
+STUDY_FRIENDLY_LEVELS = ["study heaven", "good", "decent", "mixed", "fair", "excellent", "poor", "perfect", "okay", "great", "Mixed"]
 
 # Boston Metropolitan Area coordinates for realistic locations
 BOSTON_AREA_BOUNDS = {

@@ -152,9 +152,9 @@ class CafeRepository:
         import random
         
         # Define the new field options
-        atmosphere_options = ["Cozy", "Rustic", "Traditional", "Warm", "Clean"]
-        energy_level_options = ["quiet", "low-key", "tranquil", "moderate", "average"]
-        study_friendly_levels = ["study heaven", "good", "decent", "mixed", "fair"]
+        atmosphere_options = ["Cozy", "Rustic", "Traditional", "Warm", "Clean", "Industrial", "Basic", "Modern", "Elegant", "Casual"]
+        energy_level_options = ["quiet", "low-key", "tranquil", "moderate", "average", "Loud", "energetic", "vibrant", "bustling", "peaceful"]
+        study_friendly_levels = ["study heaven", "good", "decent", "mixed", "fair", "excellent", "poor", "perfect", "okay", "great", "Mixed"]
         
         # Get all cafes (both with and without the fields, to convert singles to arrays)
         all_cafes = await self.collection.find({}).to_list(length=None)

@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field, conint, ConfigDict
-from typing import Optional, List, Tuple
+from pydantic import BaseModel, Field, conint, ConfigDict, field_validator
+from typing import Optional, List, Tuple, Union
 from datetime import datetime
-from enum import IntEnum, Enum
+from enum import IntEnum
 
 class AccessLevel(IntEnum):
     NONE = 0
@@ -9,26 +9,7 @@ class AccessLevel(IntEnum):
     FAIR = 2
     EXCELLENT = 3
 
-class AtmosphereType(str, Enum):
-    COZY = "Cozy"
-    RUSTIC = "Rustic"
-    TRADITIONAL = "Traditional"
-    WARM = "Warm"
-    CLEAN = "Clean"
-
-class EnergyLevel(str, Enum):
-    QUIET = "quiet"
-    LOW_KEY = "low-key"
-    TRANQUIL = "tranquil"
-    MODERATE = "moderate"
-    AVERAGE = "average"
-
-class StudyFriendlyLevel(str, Enum):
-    STUDY_HEAVEN = "study heaven"
-    GOOD = "good"
-    DECENT = "decent"
-    MIXED = "mixed"
-    FAIR = "fair"
+# Removed enum definitions - now using flexible List[str] for tag fields
 
 class Address(BaseModel):
     street: str = Field(..., example="123 Main St")
@@ -53,9 +34,54 @@ class CafeBase(BaseModel):
     wifi_access: AccessLevel = Field(default=AccessLevel.NONE, example=3)
     outlet_accessibility: AccessLevel = Field(default=AccessLevel.NONE, example=2)
     average_rating: conint(ge=1, le=5) = Field(default=1, example=4)
-    atmosphere: List[AtmosphereType] = Field(default_factory=lambda: [AtmosphereType.COZY, AtmosphereType.WARM], example=["Cozy", "Warm", "Traditional", "Clean"])
-    energy_level: List[EnergyLevel] = Field(default_factory=lambda: [EnergyLevel.MODERATE, EnergyLevel.TRANQUIL], example=["moderate", "tranquil", "quiet", "low-key"])
-    study_friendly: List[StudyFriendlyLevel] = Field(default_factory=lambda: [StudyFriendlyLevel.GOOD, StudyFriendlyLevel.DECENT], example=["good", "decent", "study heaven", "mixed"])
+    atmosphere: List[str] = Field(default_factory=lambda: ["Cozy", "Warm"], example=["Cozy", "Warm", "Traditional", "Clean", "Industrial", "Modern"])
+    energy_level: List[str] = Field(default_factory=lambda: ["moderate", "tranquil"], example=["moderate", "tranquil", "quiet", "low-key", "energetic", "vibrant"])
+    study_friendly: List[str] = Field(default_factory=lambda: ["good", "decent"], example=["good", "decent", "study heaven", "mixed", "excellent", "perfect"])
+
+    @field_validator('atmosphere', mode='before')
+    @classmethod
+    def validate_atmosphere(cls, v):
+        if isinstance(v, list):
+            # Handle comma-separated strings within array elements
+            result = []
+            for item in v:
+                if isinstance(item, str) and ',' in item:
+                    # Split comma-separated values
+                    result.extend([x.strip() for x in item.split(',')])
+                else:
+                    result.append(item)
+            return result
+        return v
+
+    @field_validator('energy_level', mode='before')
+    @classmethod
+    def validate_energy_level(cls, v):
+        if isinstance(v, list):
+            # Handle comma-separated strings within array elements
+            result = []
+            for item in v:
+                if isinstance(item, str) and ',' in item:
+                    # Split comma-separated values
+                    result.extend([x.strip() for x in item.split(',')])
+                else:
+                    result.append(item)
+            return result
+        return v
+
+    @field_validator('study_friendly', mode='before')
+    @classmethod
+    def validate_study_friendly(cls, v):
+        if isinstance(v, list):
+            # Handle comma-separated strings within array elements
+            result = []
+            for item in v:
+                if isinstance(item, str) and ',' in item:
+                    # Split comma-separated values
+                    result.extend([x.strip() for x in item.split(',')])
+                else:
+                    result.append(item)
+            return result
+        return v
 
 class CafeCreate(CafeBase):
     pass
@@ -72,9 +98,9 @@ class CafeUpdate(BaseModel):
     wifi_access: Optional[AccessLevel] = Field(None, example=3)
     outlet_accessibility: Optional[AccessLevel] = Field(None, example=3)
     average_rating: Optional[conint(ge=1, le=5)] = Field(None, example=5)
-    atmosphere: Optional[List[AtmosphereType]] = Field(None, example=["Warm", "Cozy", "Clean", "Traditional"])
-    energy_level: Optional[List[EnergyLevel]] = Field(None, example=["tranquil", "quiet", "low-key", "moderate"])
-    study_friendly: Optional[List[StudyFriendlyLevel]] = Field(None, example=["study heaven", "good", "decent", "mixed"])
+    atmosphere: Optional[List[str]] = Field(None, example=["Warm", "Cozy", "Clean", "Traditional", "Industrial", "Modern"])
+    energy_level: Optional[List[str]] = Field(None, example=["tranquil", "quiet", "low-key", "moderate", "energetic", "vibrant"])
+    study_friendly: Optional[List[str]] = Field(None, example=["study heaven", "good", "decent", "mixed", "excellent", "perfect"])
 
 class Cafe(CafeBase):
     id: str = Field(..., alias="_id", example="60d5ec49e9af8b2c24e8a1b2")
