@@ -160,6 +160,56 @@ async def get_reviews_by_study_spot(
     """
     return await review_controller.get_reviews_by_study_spot(study_spot_id)
 
+@router.get(
+    "/reviews/by-user/{user_id}",
+    response_model=List[Review],
+    summary="Get reviews by user",
+    description="Retrieve all reviews submitted by a specific user, identified by their user ID. This is useful for displaying a user's review history and activity.",
+    response_description="A list of review objects submitted by the specified user",
+    responses={
+        200: {
+            "description": "Successfully retrieved list of reviews by the user",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "60d5ec49e9af8b2c24e8a1b2",
+                            "study_spot_id": "cafe123",
+                            "user_id": "user456",
+                            "overall_rating": 4.5,
+                            "outlet_accessibility": 4.0,
+                            "wifi_quality": 5.0,
+                            "atmosphere": "Quiet and peaceful",
+                            "energy_level": "Calm",
+                            "study_friendly": "Very study-friendly",
+                            "photos": [],
+                            "created_at": "2024-01-15T10:30:00Z",
+                            "updated_at": "2024-01-15T10:30:00Z"
+                        }
+                    ]
+                }
+            }
+        },
+        404: {
+            "description": "User not found or no reviews found for this user",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "No reviews found for this user"}
+                }
+            }
+        }
+    }
+)
+async def get_reviews_by_user(
+    user_id: str = Path(..., description="The unique ID of the user to get reviews for")
+):
+    """
+    Get all reviews submitted by a specific user.
+
+    - **user_id**: The unique identifier of the user
+    """
+    return await review_controller.get_reviews_by_user(user_id)
+
 @router.put(
     "/reviews/{review_id}",
     response_model=Review,

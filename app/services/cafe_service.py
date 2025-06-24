@@ -98,4 +98,31 @@ class CafeService:
     async def get_cafe_photos(self, cafe_id: str) -> List[dict]:
         """Get all photos for a specific cafe from all reviews"""
         logger.info(f"Service: Getting photos for cafe: {cafe_id}")
-        return await self.repository.get_cafe_photos(cafe_id) 
+        return await self.repository.get_cafe_photos(cafe_id)
+
+    async def update_cafe_average_rating(self, cafe_id: str) -> Optional[Cafe]:
+        """Calculate and update the average rating for a cafe based on all its reviews"""
+        logger.info(f"Service: Updating average rating for cafe: {cafe_id}")
+        
+        try:
+            # Get the average rating from reviews
+            average_rating = await self.repository.calculate_average_rating_from_reviews(cafe_id)
+            
+            if average_rating is not None:
+                # Update the cafe with the new average rating
+                update_data = {"average_rating": round(average_rating, 1)}
+                updated_cafe = await self.repository.update_cafe(cafe_id, update_data)
+                
+                if updated_cafe:
+                    logger.info(f"Service: Updated cafe {cafe_id} average rating to {average_rating:.1f}")
+                    return updated_cafe
+                else:
+                    logger.warning(f"Service: Failed to update average rating for cafe {cafe_id}")
+            else:
+                logger.info(f"Service: No reviews found for cafe {cafe_id}, keeping current rating")
+            
+            return await self.get_cafe(cafe_id)
+            
+        except Exception as e:
+            logger.error(f"Service: Error updating average rating for cafe {cafe_id}: {str(e)}", exc_info=True)
+            return None 

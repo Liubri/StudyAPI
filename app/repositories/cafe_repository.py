@@ -145,4 +145,82 @@ class CafeRepository:
                 "created_at": photo["created_at"]
             })
         
-        return formatted_photos 
+        return formatted_photos
+
+    async def update_all_cafes_with_array_fields(self):
+        """Update all existing cafes to have array-based tag fields with 4-5 entries each"""
+        import random
+        
+        # Define the new field options
+        atmosphere_options = ["Cozy", "Rustic", "Traditional", "Warm", "Clean"]
+        energy_level_options = ["quiet", "low-key", "tranquil", "moderate", "average"]
+        study_friendly_levels = ["study heaven", "good", "decent", "mixed", "fair"]
+        
+        # Get all cafes (both with and without the fields, to convert singles to arrays)
+        all_cafes = await self.collection.find({}).to_list(length=None)
+        
+        updated_count = 0
+        for cafe in all_cafes:
+            update_data = {}
+            
+            # Handle atmosphere field
+            current_atmosphere = cafe.get("atmosphere")
+            if not current_atmosphere or not isinstance(current_atmosphere, list):
+                # Generate 4-5 unique atmosphere tags
+                num_tags = random.randint(4, min(5, len(atmosphere_options)))
+                update_data["atmosphere"] = random.sample(atmosphere_options, num_tags)
+            
+            # Handle energy_level field
+            current_energy = cafe.get("energy_level")
+            if not current_energy or not isinstance(current_energy, list):
+                # Generate 4-5 unique energy level tags
+                num_tags = random.randint(4, min(5, len(energy_level_options)))
+                update_data["energy_level"] = random.sample(energy_level_options, num_tags)
+            
+            # Handle study_friendly field
+            current_study = cafe.get("study_friendly")
+            if not current_study or not isinstance(current_study, list):
+                # Generate 4-5 unique study friendly tags
+                num_tags = random.randint(4, min(5, len(study_friendly_levels)))
+                update_data["study_friendly"] = random.sample(study_friendly_levels, num_tags)
+            
+            # Only update if we have changes to make
+            if update_data:
+                update_data["updated_at"] = datetime.utcnow()
+                
+                result = await self.collection.update_one(
+                    {"_id": cafe["_id"]},
+                    {"$set": update_data}
+                )
+                
+                if result.modified_count:
+                    updated_count += 1
+        
+        return updated_count
+
+    async def calculate_average_rating_from_reviews(self, cafe_id: str) -> Optional[float]:
+        """Calculate the average overall_rating from all reviews for a specific cafe"""
+        from bson import ObjectId
+        
+        # Access the reviews collection
+        reviews_collection = Database.get_db().reviews
+        
+        # Aggregate to calculate average rating
+        pipeline = [
+            # Match reviews for this specific cafe
+            {"$match": {"study_spot_id": ObjectId(cafe_id)}},
+            # Group and calculate average
+            {"$group": {
+                "_id": None,
+                "average_rating": {"$avg": "$overall_rating"},
+                "review_count": {"$sum": 1}
+            }}
+        ]
+        
+        cursor = reviews_collection.aggregate(pipeline)
+        result = await cursor.to_list(length=1)
+        
+        if result and result[0]["review_count"] > 0:
+            return result[0]["average_rating"]
+        
+        return None 

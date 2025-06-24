@@ -1,13 +1,34 @@
 from pydantic import BaseModel, Field, conint, ConfigDict
 from typing import Optional, List, Tuple
 from datetime import datetime
-from enum import IntEnum
+from enum import IntEnum, Enum
 
 class AccessLevel(IntEnum):
     NONE = 0
     POOR = 1
     FAIR = 2
     EXCELLENT = 3
+
+class AtmosphereType(str, Enum):
+    COZY = "Cozy"
+    RUSTIC = "Rustic"
+    TRADITIONAL = "Traditional"
+    WARM = "Warm"
+    CLEAN = "Clean"
+
+class EnergyLevel(str, Enum):
+    QUIET = "quiet"
+    LOW_KEY = "low-key"
+    TRANQUIL = "tranquil"
+    MODERATE = "moderate"
+    AVERAGE = "average"
+
+class StudyFriendlyLevel(str, Enum):
+    STUDY_HEAVEN = "study heaven"
+    GOOD = "good"
+    DECENT = "decent"
+    MIXED = "mixed"
+    FAIR = "fair"
 
 class Address(BaseModel):
     street: str = Field(..., example="123 Main St")
@@ -32,6 +53,9 @@ class CafeBase(BaseModel):
     wifi_access: AccessLevel = Field(default=AccessLevel.NONE, example=3)
     outlet_accessibility: AccessLevel = Field(default=AccessLevel.NONE, example=2)
     average_rating: conint(ge=1, le=5) = Field(default=1, example=4)
+    atmosphere: List[AtmosphereType] = Field(default_factory=lambda: [AtmosphereType.COZY, AtmosphereType.WARM], example=["Cozy", "Warm", "Traditional", "Clean"])
+    energy_level: List[EnergyLevel] = Field(default_factory=lambda: [EnergyLevel.MODERATE, EnergyLevel.TRANQUIL], example=["moderate", "tranquil", "quiet", "low-key"])
+    study_friendly: List[StudyFriendlyLevel] = Field(default_factory=lambda: [StudyFriendlyLevel.GOOD, StudyFriendlyLevel.DECENT], example=["good", "decent", "study heaven", "mixed"])
 
 class CafeCreate(CafeBase):
     pass
@@ -48,6 +72,9 @@ class CafeUpdate(BaseModel):
     wifi_access: Optional[AccessLevel] = Field(None, example=3)
     outlet_accessibility: Optional[AccessLevel] = Field(None, example=3)
     average_rating: Optional[conint(ge=1, le=5)] = Field(None, example=5)
+    atmosphere: Optional[List[AtmosphereType]] = Field(None, example=["Warm", "Cozy", "Clean", "Traditional"])
+    energy_level: Optional[List[EnergyLevel]] = Field(None, example=["tranquil", "quiet", "low-key", "moderate"])
+    study_friendly: Optional[List[StudyFriendlyLevel]] = Field(None, example=["study heaven", "good", "decent", "mixed"])
 
 class Cafe(CafeBase):
     id: str = Field(..., alias="_id", example="60d5ec49e9af8b2c24e8a1b2")

@@ -51,6 +51,16 @@ class ReviewRepository:
                 photo["_id"] = str(photo["_id"])
         return [Review.model_validate(review) for review in reviews]
 
+    async def get_reviews_by_user(self, user_id: str) -> List[Review]:
+        cursor = self.collection.find({"user_id": user_id})
+        reviews = await cursor.to_list(length=None)
+        for review in reviews:
+            review["_id"] = str(review["_id"])
+            review["study_spot_id"] = str(review["study_spot_id"])
+            for photo in review.get("photos", []):
+                photo["_id"] = str(photo["_id"])
+        return [Review.model_validate(review) for review in reviews]
+
     async def update_review(self, review_id: str, review_data: dict) -> Optional[Review]:
         review_data["updated_at"] = datetime.utcnow()
         result = await self.collection.update_one(

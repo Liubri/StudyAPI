@@ -17,12 +17,12 @@ fake = Faker()
 
 BASE_URL = "http://localhost:8000/api/v1"
 
-# Realistic data pools for cafes
+# Realistic data pools for cafes (Boston-themed)
 CAFE_NAMES = [
-    "The Study Hub", "Coffee & Code", "Grind Coffee", "The Daily Grind",
-    "Brew & Books", "Caffeine Central", "The Roasted Bean", "Study Spot Cafe",
-    "The Coffee Lab", "Focus & Fuel", "Bean There Done That", "The Productive Cup",
-    "Code & Coffee Co.", "The Study Station", "Espresso Express"
+    "The Beantown Grind", "Harvard Square Coffee", "MIT Study Lounge", "Fenway Brew",
+    "Tea Party Cafe", "Back Bay Coffee Co.", "The Cambridge Roast", "North End Espresso",
+    "Beacon Hill Beans", "South End Study Spot", "Blue Line Coffee", "The Hub Cafe",
+    "Quincy Market Coffee", "Boston Common Brew", "Newbury Street Coffee"
 ]
 
 AMENITIES_POOL = [
@@ -46,16 +46,21 @@ STUDY_FRIENDLY_OPTIONS = [
     "Better for short sessions", "Great for long study sessions"
 ]
 
-# San Francisco Bay Area coordinates for realistic locations
-SF_BAY_AREA_BOUNDS = {
-    "lat_min": 37.4, "lat_max": 37.8,
-    "lng_min": -122.5, "lng_max": -122.0
+# New cafe tag options
+ATMOSPHERE_OPTIONS = ["Cozy", "Rustic", "Traditional", "Warm", "Clean"]
+ENERGY_LEVEL_OPTIONS = ["quiet", "low-key", "tranquil", "moderate", "average"]
+STUDY_FRIENDLY_LEVELS = ["study heaven", "good", "decent", "mixed", "fair"]
+
+# Boston Metropolitan Area coordinates for realistic locations
+BOSTON_AREA_BOUNDS = {
+    "lat_min": 42.25, "lat_max": 42.45,
+    "lng_min": -71.25, "lng_max": -70.95
 }
 
-def generate_sf_coordinates():
-    """Generate random coordinates within SF Bay Area"""
-    lat = random.uniform(SF_BAY_AREA_BOUNDS["lat_min"], SF_BAY_AREA_BOUNDS["lat_max"])
-    lng = random.uniform(SF_BAY_AREA_BOUNDS["lng_min"], SF_BAY_AREA_BOUNDS["lng_max"])
+def generate_boston_coordinates():
+    """Generate random coordinates within Boston Metropolitan Area"""
+    lat = random.uniform(BOSTON_AREA_BOUNDS["lat_min"], BOSTON_AREA_BOUNDS["lat_max"])
+    lng = random.uniform(BOSTON_AREA_BOUNDS["lng_min"], BOSTON_AREA_BOUNDS["lng_max"])
     return [lng, lat]  # [longitude, latitude] format for MongoDB
 
 def generate_fake_users(count: int = 10) -> List[Dict]:
@@ -93,14 +98,14 @@ def generate_fake_cafes(count: int = 10) -> List[Dict]:
         # Generate realistic address
         address = {
             "street": fake.street_address(),
-            "city": random.choice(["San Francisco", "Oakland", "Berkeley", "Palo Alto", "San Jose"]),
-            "state": "CA",
+            "city": random.choice(["Boston", "Cambridge", "Somerville", "Brookline", "Newton"]),
+            "state": "MA",
             "zip_code": fake.zipcode(),
             "country": "USA"
         }
         
         # Generate location coordinates
-        coordinates = generate_sf_coordinates()
+        coordinates = generate_boston_coordinates()
         location = {
             "type": "Point",
             "coordinates": coordinates
@@ -128,10 +133,13 @@ def generate_fake_cafes(count: int = 10) -> List[Dict]:
             "website": f"https://www.{cafe_name.lower().replace(' ', '').replace('&', 'and')}.com",
             "opening_hours": opening_hours,
             "amenities": amenities,
-            "thumbnail_url": f"https://example.com/cafe_{i+1}.jpg",
+            "thumbnail_url": "https://plus.unsplash.com/premium_photo-1664970900025-1e3099ca757a?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "wifi_access": random.randint(1, 3),  # 1=POOR, 2=FAIR, 3=EXCELLENT
             "outlet_accessibility": random.randint(1, 3),
-            "average_rating": random.randint(3, 5)
+            "average_rating": random.randint(3, 5),
+            "atmosphere": random.sample(ATMOSPHERE_OPTIONS, random.randint(4, min(5, len(ATMOSPHERE_OPTIONS)))),
+            "energy_level": random.sample(ENERGY_LEVEL_OPTIONS, random.randint(4, min(5, len(ENERGY_LEVEL_OPTIONS)))),
+            "study_friendly": random.sample(STUDY_FRIENDLY_LEVELS, random.randint(4, min(5, len(STUDY_FRIENDLY_LEVELS))))
         }
         cafes.append(cafe_data)
     
@@ -188,30 +196,30 @@ def create_data_via_api():
     print(f"   ✅ Generated {len(cafes_data)} cafes")
     
     # Create users
-    print("\n👥 Creating users...")
-    created_users = []
-    for i, user_data in enumerate(users_data):
-        try:
-            response = requests.post(f"{BASE_URL}/users/", json=user_data)
-            if response.status_code == 201:
-                user = response.json()
-                # Check if 'id' field exists, fallback to '_id' if needed
-                user_id = user.get('id') or user.get('_id')
-                if not user_id:
-                    print(f"   ❌ Response missing both 'id' and '_id' fields. Available keys: {list(user.keys())}")
-                    continue
-                # Normalize the response to always have 'id' field
-                if 'id' not in user and '_id' in user:
-                    user['id'] = user['_id']
-                created_users.append(user)
-                print(f"   ✅ Created user: {user['name']} (ID: {user_id[:8]}...)")
-            else:
-                print(f"   ❌ Failed to create user {user_data['name']}: {response.text}")
-        except KeyError as e:
-            print(f"   ❌ KeyError accessing field {e} in response for user {user_data['name']}")
-            print(f"   📥 Full response: {response.json() if response.status_code == 201 else response.text}")
-        except Exception as e:
-            print(f"   ❌ Error creating user {user_data['name']}: {e}")
+    # print("\n👥 Creating users...")
+    # created_users = []
+    # for i, user_data in enumerate(users_data):
+    #     try:
+    #         response = requests.post(f"{BASE_URL}/users/", json=user_data)
+    #         if response.status_code == 201:
+    #             user = response.json()
+    #             # Check if 'id' field exists, fallback to '_id' if needed
+    #             user_id = user.get('id') or user.get('_id')
+    #             if not user_id:
+    #                 print(f"   ❌ Response missing both 'id' and '_id' fields. Available keys: {list(user.keys())}")
+    #                 continue
+    #             # Normalize the response to always have 'id' field
+    #             if 'id' not in user and '_id' in user:
+    #                 user['id'] = user['_id']
+    #             created_users.append(user)
+    #             print(f"   ✅ Created user: {user['name']} (ID: {user_id[:8]}...)")
+    #         else:
+    #             print(f"   ❌ Failed to create user {user_data['name']}: {response.text}")
+    #     except KeyError as e:
+    #         print(f"   ❌ KeyError accessing field {e} in response for user {user_data['name']}")
+    #         print(f"   📥 Full response: {response.json() if response.status_code == 201 else response.text}")
+    #     except Exception as e:
+    #         print(f"   ❌ Error creating user {user_data['name']}: {e}")
     
     # Create cafes
     print("\n☕ Creating cafes...")
@@ -239,54 +247,54 @@ def create_data_via_api():
         except Exception as e:
             print(f"   ❌ Error creating cafe {cafe_data['name']}: {e}")
     
-    if not created_users or not created_cafes:
-        print("\n❌ Cannot create reviews without users and cafes!")
-        return
+    # if not created_users or not created_cafes:
+    #     print("\n❌ Cannot create reviews without users and cafes!")
+    #     return
     
-    # Generate and create reviews
-    user_ids = [user['id'] for user in created_users]
-    cafe_ids = [cafe['id'] for cafe in created_cafes]
-    reviews_data = generate_fake_reviews(user_ids, cafe_ids, 20)
+    # # Generate and create reviews
+    # user_ids = [user['id'] for user in created_users]
+    # cafe_ids = [cafe['id'] for cafe in created_cafes]
+    # reviews_data = generate_fake_reviews(user_ids, cafe_ids, 20)
     
-    print(f"\n📝 Creating {len(reviews_data)} reviews...")
-    created_reviews = []
-    for i, review_data in enumerate(reviews_data):
-        try:
-            response = requests.post(f"{BASE_URL}/reviews/", json=review_data)
-            if response.status_code == 201:  # Reviews return 201, not 200
-                review = response.json()
-                # Check if 'id' field exists, fallback to '_id' if needed
-                review_id = review.get('id') or review.get('_id')
-                if not review_id:
-                    print(f"   ❌ Response missing both 'id' and '_id' fields. Available keys: {list(review.keys())}")
-                    continue
-                # Normalize the response to always have 'id' field
-                if 'id' not in review and '_id' in review:
-                    review['id'] = review['_id']
-                created_reviews.append(review)
-                print(f"   ✅ Created review {i+1}/20 (ID: {review_id[:8]}...)")
-            else:
-                print(f"   ❌ Failed to create review {i+1} (status {response.status_code}): {response.text}")
-        except KeyError as e:
-            print(f"   ❌ KeyError accessing field {e} in response for review {i+1}")
-            print(f"   📥 Full response: {response.json() if response.status_code == 201 else response.text}")
-        except Exception as e:
-            print(f"   ❌ Error creating review {i+1}: {e}")
+    # print(f"\n📝 Creating {len(reviews_data)} reviews...")
+    # created_reviews = []
+    # for i, review_data in enumerate(reviews_data):
+    #     try:
+    #         response = requests.post(f"{BASE_URL}/reviews/", json=review_data)
+    #         if response.status_code == 201:  # Reviews return 201, not 200
+    #             review = response.json()
+    #             # Check if 'id' field exists, fallback to '_id' if needed
+    #             review_id = review.get('id') or review.get('_id')
+    #             if not review_id:
+    #                 print(f"   ❌ Response missing both 'id' and '_id' fields. Available keys: {list(review.keys())}")
+    #                 continue
+    #             # Normalize the response to always have 'id' field
+    #             if 'id' not in review and '_id' in review:
+    #                 review['id'] = review['_id']
+    #             created_reviews.append(review)
+    #             print(f"   ✅ Created review {i+1}/20 (ID: {review_id[:8]}...)")
+    #         else:
+    #             print(f"   ❌ Failed to create review {i+1} (status {response.status_code}): {response.text}")
+    #     except KeyError as e:
+    #         print(f"   ❌ KeyError accessing field {e} in response for review {i+1}")
+    #         print(f"   📥 Full response: {response.json() if response.status_code == 201 else response.text}")
+    #     except Exception as e:
+    #         print(f"   ❌ Error creating review {i+1}: {e}")
     
-    # Summary
-    print(f"\n🎉 Data generation complete!")
-    print(f"   📊 Users created: {len(created_users)}/10")
-    print(f"   📊 Cafes created: {len(created_cafes)}/10")
-    print(f"   📊 Reviews created: {len(created_reviews)}/20")
+    # # Summary
+    # print(f"\n🎉 Data generation complete!")
+    # print(f"   📊 Users created: {len(created_users)}/10")
+    # print(f"   📊 Cafes created: {len(created_cafes)}/10")
+    # print(f"   📊 Reviews created: {len(created_reviews)}/20")
     
-    # Show sample data relationships
-    if created_users and created_cafes and created_reviews:
-        print(f"\n🔗 Sample relationships:")
-        sample_review = reviews_data[0] if reviews_data else None
-        if sample_review:
-            user_name = next((u['name'] for u in created_users if u['id'] == sample_review['user_id']), "Unknown")
-            cafe_name = next((c['name'] for c in created_cafes if c['id'] == sample_review['study_spot_id']), "Unknown")
-            print(f"   👤 User '{user_name}' reviewed ☕ '{cafe_name}' with {sample_review['overall_rating']} stars")
+    # # Show sample data relationships
+    # if created_users and created_cafes and created_reviews:
+    #     print(f"\n🔗 Sample relationships:")
+    #     sample_review = reviews_data[0] if reviews_data else None
+    #     if sample_review:
+    #         user_name = next((u['name'] for u in created_users if u['id'] == sample_review['user_id']), "Unknown")
+    #         cafe_name = next((c['name'] for c in created_cafes if c['id'] == sample_review['study_spot_id']), "Unknown")
+    #         print(f"   👤 User '{user_name}' reviewed ☕ '{cafe_name}' with {sample_review['overall_rating']} stars")
 
 def print_generated_data_info():
     """Print information about the data that will be generated"""

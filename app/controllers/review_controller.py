@@ -22,6 +22,9 @@ class ReviewController:
     async def get_reviews_by_study_spot(self, study_spot_id: str) -> List[Review]:
         return await self.service.get_reviews_by_study_spot(study_spot_id)
 
+    async def get_reviews_by_user(self, user_id: str) -> List[Review]:
+        return await self.service.get_reviews_by_user(user_id)
+
     async def update_review(self, review_id: str, review_data: ReviewUpdate) -> Review:
         # Validate the review exists
         existing_review = await self.service.get_review(review_id)
